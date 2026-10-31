@@ -1,36 +1,45 @@
-# Erased Player
+# GBA Player
 
-Player de Game Boy Advance no navegador, feito em HTML, CSS e JavaScript. Usa o mGBA compilado para WebAssembly como núcleo de emulação. O meu trabalho está na interface e na integração: carregamento do jogo, controles, saves e instalação.
+![Tela de abertura](docs/abertura.png)
 
-**Este projeto não inclui jogos nem BIOS.** Cada pessoa escolhe o arquivo do jogo que possui, e ele fica guardado apenas no navegador dela.
+Um player de Game Boy Advance que roda dentro do navegador, sem instalar nada. O emulador por baixo é o mGBA, compilado para WebAssembly. O que eu fiz foi tudo em volta dele: abrir o jogo, controles, saves, escala de vídeo e uma abertura que explica o que está errado quando o emulador não sobe.
 
-## Recursos
-- Tela de título no estilo de abertura de jogo (estrelas em canvas, cartucho desenhado pixel a pixel, efeito de monitor antigo), com a autoria e o propósito do projeto. Ela mostra a checagem real de cada etapa e espera a pessoa apertar Enter ou clicar. Se algo falha, explica o motivo
-- Interface de ferramenta: barra lateral com arquivo, emulação, estados, saves, escala, tela cheia e volume
-- Leitura do cabeçalho do jogo no próprio navegador (título, código e marca de validade)
-- Saves guardados no navegador (IndexedDB), com sincronização automática
-- Baixar e enviar o arquivo de save (.sav)
-- Escala de vídeo inteira (1x a 5x) ou ajustada à tela
-- Registro de eventos, que pode ser copiado
-- Teclado no computador e controles na tela no celular
+Site no ar: https://erasedsin.github.io/My-game-Boy-Emulator/
 
-## Tecnologias
-- HTML, CSS e JavaScript puro
-- [mGBA](https://mgba.io) em WebAssembly, pelo pacote `@thenick775/mgba-wasm`
-- `coi-serviceworker`, para publicar no GitHub Pages (o núcleo usa threads e exige isolamento de origem)
+O repositório não traz jogo nenhum. Cada pessoa escolhe o arquivo do próprio cartucho, e ele fica guardado só no navegador dela.
 
-## Rodar no computador
-O arquivo precisa ser aberto por um servidor, não direto do disco:
+![Interface do player](docs/interface.png)
 
-```bash
-python -m http.server 8000
-```
+## O que ele faz
 
-Abra http://localhost:8000. Na primeira visita a página recarrega sozinha uma vez.
+Abre jogos em .gba, .gb, .gbc ou dentro de um .zip. Antes de entregar o arquivo ao emulador, a página lê os primeiros 192 bytes e mostra na lateral o título interno, o código do jogo e se o cabeçalho de GBA é válido. Se o emulador recusar o arquivo, a mensagem aparece na tela e o motivo vai para o registro.
 
-## Limitações
+Os saves ficam no IndexedDB do navegador. Uma sincronização roda a cada 15 segundos, quando a aba é escondida e quando a página fecha, então fechar sem querer não perde o progresso. Dá para baixar o arquivo .sav, levar para outro aparelho e enviar de volta (o nome precisa ser o mesmo do jogo). Existe também um slot de estado, que guarda uma foto de tudo que está na memória do emulador e é diferente do save interno do jogo.
 
-- O arquivo de save enviado precisa ter o mesmo nome do jogo, terminando em `.sav`.
+No computador valem as teclas padrão do mGBA: setas, X e Z para A e B, A e S para L e R, Enter e Backspace para Start e Select. Em aparelhos de toque aparecem botões na tela. Eles acendem quando a tecla correspondente é apertada, o que ajuda a ver o que está sendo lido.
 
-## Créditos e licenças
-Veja o [NOTICE.md](NOTICE.md). O código desta interface usa a licença MIT. O mGBA usa a MPL-2.0, e o código-fonte da versão usada está em https://github.com/thenick775/mgba.
+A escala do vídeo é sempre inteira, de 1x a 5x, para os pixels ficarem nítidos, ou automática conforme a janela. Tem tela cheia e volume de 0 a 200%.
+
+Um painel de registro mostra o que aconteceu desde que a página abriu: se o navegador liberou as threads e o WebGL2, onde estão os arquivos do núcleo, quanto tempo levou para copiar o jogo e o resultado do loadGame. Dá para copiar o texto e mandar para alguém quando algo não funciona.
+
+A abertura é uma tela de título em pixel art, com cartucho, estrelas e um filtro de monitor antigo, tudo desenhado por código, sem imagens. Enquanto espera a pessoa apertar Enter, ela roda as checagens do ambiente. Se alguma falha, o botão vira "entrar mesmo assim" e o erro fica à vista.
+
+## Por dentro
+
+O mGBA-wasm usa threads, e o navegador só libera isso em páginas isoladas pelos cabeçalhos COOP e COEP. O GitHub Pages não deixa configurar cabeçalhos, então uso o coi-serviceworker, que injeta os cabeçalhos por meio de um service worker. É por isso que a primeira visita recarrega a página sozinha.
+
+O resto é HTML, CSS e JavaScript puro, num único index.html.
+
+## Limites
+
+Testado no Edge e no Chrome. O Safari eu não testei, e pelos requisitos de threads pode não funcionar. Em notebook antigo o desempenho depende da placa de vídeo e da aceleração gráfica estar ligada. As teclas ainda não são remapeáveis, e só existe um slot de estado.
+
+## O que falta
+
+Vários slots de estado, remapear teclas, controle USB pela Gamepad API, acelerar e câmera lenta (o núcleo já tem a função) e testes automatizados.
+
+## Créditos
+
+O emulador é o mGBA, de Vicki Pfau, sob a licença MPL-2.0. A versão em WebAssembly vem do pacote @thenick775/mgba-wasm (2.6.0). O coi-serviceworker é de Guido Zuidhof (MIT). O código desta página usa a licença MIT. Os detalhes estão no [NOTICE.md](NOTICE.md).
+
+Game Boy Advance é marca registrada da Nintendo, e este projeto não tem relação com a empresa.
