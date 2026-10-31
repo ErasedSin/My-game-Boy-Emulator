@@ -1,4 +1,4 @@
-# Gaio Player
+# Erased Player
 
 Player de Game Boy Advance no navegador, feito em HTML, CSS e JavaScript. Usa o mGBA compilado para WebAssembly como núcleo de emulação. O meu trabalho está na interface e na integração: carregamento do jogo, controles, saves e instalação.
 
