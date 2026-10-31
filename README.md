@@ -28,11 +28,8 @@ python -m http.server 8000
 
 Abra http://localhost:8000. Na primeira visita a página recarrega sozinha uma vez.
 
-## Publicar no GitHub Pages
-Settings > Pages > Deploy from a branch > main / root. Aguarde cerca de 1 minuto e abra o site. Se aparecer a mensagem de preparo do navegador, atualize com Ctrl+Shift+R.
-
 ## Limitações
-- Teste em navegadores recentes (Chrome, Edge e Firefox). O Safari pode não funcionar por causa dos requisitos de threads.
+
 - O arquivo de save enviado precisa ter o mesmo nome do jogo, terminando em `.sav`.
 
 ## Créditos e licenças
