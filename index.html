@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GBA Player - Gaio Moreira</title>
+  <meta name="description" content="Interface própria para o emulador mGBA em WebAssembly, feita por Gaio Moreira. Saves no navegador e controles para toque. Use o seu próprio arquivo de jogo." />
+  <meta name="theme-color" content="#0f1113" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230f1113'/%3E%3Crect x='6' y='9' width='20' height='14' fill='none' stroke='%23e0a030' stroke-width='2'/%3E%3C/svg%3E" />
+  <script src="coi-serviceworker.js"></script>
+  <style>
+    :root { --fundo: #0f1113; --painel: #15181b; --linha: #2b3036; --texto: #d6d9dc; --mudo: #8a9199; --acento: #e0a030; --ok: #6fcf97; --erro: #ef6b6b; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    [hidden] { display: none !important; }
+    body { background: var(--fundo); color: var(--texto); font: 13px/1.5 ui-monospace, "Cascadia Mono", Consolas, "Courier New", monospace; min-height: 100vh; }
+    button, .btn { font: inherit; color: var(--texto); background: #1b1f23; border: 1px solid var(--linha); border-radius: 2px; padding: 6px 10px; cursor: pointer; text-align: left; display: block; }
+    button:hover:not(:disabled), .btn:hover { border-color: #4a525a; background: #21262b; }
+    button:disabled { opacity: 0.4; cursor: default; }
+    .principal { border-color: var(--acento); color: var(--acento); }
+    :focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
+    select, input[type="range"] { font: inherit; color: var(--texto); background: #1b1f23; border: 1px solid var(--linha); border-radius: 2px; padding: 4px 6px; width: 100%; }
+    input[type="range"] { padding: 0; accent-color: var(--acento); }
+
+    .abertura { position: fixed; inset: 0; z-index: 50; background: #0b0c0e; display: grid; align-items: center; padding: 6vw; transition: opacity 0.5s ease; overflow: auto; }
+    .abertura.saindo { opacity: 0; pointer-events: none; }
+    .ab-conteudo { max-width: 660px; display: grid; gap: 14px; }
+    .ab-sup { color: var(--mudo); text-transform: uppercase; letter-spacing: 0.2em; font-size: 11px; }
+    .ab-conteudo h1 { font-size: clamp(30px, 6vw, 46px); font-weight: 400; letter-spacing: -0.02em; line-height: 1.1; }
+    .ab-autor { color: var(--acento); font-size: 15px; }
+    .ab-texto { color: #b4b9be; max-width: 60ch; }
+    .ab-lista { list-style: none; color: var(--mudo); display: grid; gap: 2px; }
+    .ab-lista li::before { content: "- "; }
+    .ab-log { min-height: 8.5em; border-top: 1px solid var(--linha); border-bottom: 1px solid var(--linha); padding: 8px 0; display: grid; align-content: start; }
+    .ab-log .ok { color: var(--ok); } .ab-log .falha { color: var(--erro); } .ab-log .aviso { color: var(--acento); } .ab-log .andamento { color: var(--mudo); }
+    .ab-rodape { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; color: var(--mudo); font-size: 12px; }
+    .ab-rodape button { text-align: center; }
+
+    .app { display: grid; grid-template-rows: auto 1fr auto; min-height: 100vh; }
+    .barra { display: flex; gap: 16px; align-items: center; padding: 8px 14px; border-bottom: 1px solid var(--linha); background: var(--painel); flex-wrap: wrap; }
+    .barra strong { color: var(--acento); font-weight: 700; }
+    .barra .sp { flex: 1; }
+    .barra span { color: var(--mudo); }
+    .layout { display: grid; grid-template-columns: 290px 1fr; min-height: 0; }
+    .lateral { border-right: 1px solid var(--linha); background: var(--painel); padding: 14px; display: grid; gap: 18px; align-content: start; overflow: auto; max-height: calc(100vh - 78px); }
+    h2 { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--mudo); border-bottom: 1px solid var(--linha); padding-bottom: 4px; margin-bottom: 8px; font-weight: 400; }
+    .grupo { display: grid; gap: 6px; }
+    dl { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; font-size: 12px; margin-top: 4px; }
+    dt { color: var(--mudo); } dd { overflow-wrap: anywhere; }
+    table { border-collapse: collapse; width: 100%; font-size: 12px; }
+    td { padding: 2px 0; border-bottom: 1px dotted var(--linha); } td:last-child { text-align: right; color: var(--mudo); }
+    label.campo { display: grid; gap: 4px; color: var(--mudo); font-size: 12px; }
+
+    .palco { padding: 14px; display: grid; gap: 14px; align-content: start; min-width: 0; }
+    .moldura { position: relative; background: #000; border: 1px solid var(--linha); width: max-content; max-width: 100%; line-height: 0; }
+    .moldura:fullscreen { display: grid; place-items: center; width: 100%; border: 0; }
+    .moldura:fullscreen canvas { width: min(100vw, 150vh) !important; }
+    canvas { display: block; image-rendering: pixelated; width: 720px; max-width: 100%; aspect-ratio: 3 / 2; background: #0a0b0d; }
+    .aviso { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; padding: 16px; background: #0a0b0d; color: var(--mudo); line-height: 1.6; }
+    .log pre { background: #0b0c0e; border: 1px solid var(--linha); padding: 8px; max-height: 200px; overflow: auto; white-space: pre-wrap; word-break: break-word; color: #aab1b8; font-size: 12px; margin-bottom: 8px; }
+    .toque { display: none; grid-template-columns: 1fr 1fr; gap: 12px; user-select: none; -webkit-user-select: none; }
+    .toque button { text-align: center; min-height: 48px; touch-action: none; }
+    .cruz { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+    .cruz .c { grid-area: 1 / 2; } .cruz .e { grid-area: 2 / 1; } .cruz .d { grid-area: 2 / 3; } .cruz .b { grid-area: 3 / 2; }
+    .acoes { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; align-content: start; }
+    .laterais { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+    .premido { background: var(--acento) !important; color: #111 !important; border-color: var(--acento) !important; }
+    .status { display: flex; flex-wrap: wrap; gap: 4px 20px; padding: 6px 14px; border-top: 1px solid var(--linha); background: var(--painel); color: var(--mudo); font-size: 12px; }
+    .status .ok { color: var(--ok); } .status .erro { color: var(--erro); }
+    @media (pointer: coarse), (hover: none) { .toque { display: grid; } }
+    @media (max-width: 860px) {
+      .layout { grid-template-columns: 1fr; }
+      .lateral { border-right: 0; border-top: 1px solid var(--linha); order: 2; max-height: none; }
+      .palco { order: 1; }
+      .moldura { width: 100%; }
+    }
+    @media (prefers-reduced-motion: reduce) { .abertura { transition: none; } }
+  </style>
+</head>
+<body>
+  <div class="abertura" id="abertura" role="dialog" aria-labelledby="ab-titulo">
+    <div class="ab-conteudo">
+      <p class="ab-sup">projeto de portfólio</p>
+      <h1 id="ab-titulo">GBA Player</h1>
+      <p class="ab-autor">feito por Gaio Moreira</p>
+      <p class="ab-texto">Interface própria para o emulador mGBA, compilado para WebAssembly e executado dentro do navegador. O intuito do projeto é praticar a integração de WebAssembly, armazenamento local (IndexedDB), service workers e controles para toque, sem nenhum servidor.</p>
+      <ul class="ab-lista">
+        <li>HTML, CSS e JavaScript puro</li>
+        <li>núcleo de emulação: mGBA (MPL-2.0), por Vicki Pfau</li>
+        <li>saves persistentes no próprio navegador</li>
+      </ul>
+      <div class="ab-log" id="ab-log" aria-live="polite"></div>
+      <div class="ab-rodape">
+        <span>Este site não inclui jogos. Use um arquivo que você possui.</span>
+        <button type="button" id="ab-entrar">Pular</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="app" id="app">
+    <header class="barra">
+      <strong>gba-player</strong>
+      <span>núcleo: mGBA <span id="v-core">-</span> (wasm)</span>
+      <span class="sp"></span>
+      <span id="estado">iniciando</span>
+    </header>
+
+    <div class="layout">
+      <aside class="lateral">
+        <section>
+          <h2>Arquivo</h2>
+          <div class="grupo">
+            <label class="btn principal">Abrir jogo...<input type="file" id="arquivo" accept=".gba,.gb,.gbc,.zip" hidden /></label>
+            <dl>
+              <dt>nome</dt><dd id="i-nome">-</dd>
+              <dt>título</dt><dd id="i-titulo">-</dd>
+              <dt>código</dt><dd id="i-codigo">-</dd>
+              <dt>tamanho</dt><dd id="i-tamanho">-</dd>
+            </dl>
+          </div>
+        </section>
+        <section>
+          <h2>Emulação</h2>
+          <div class="grupo">
+            <button type="button" id="pausar" disabled>Pausar</button>
+            <button type="button" id="reiniciar" disabled>Reiniciar</button>
+          </div>
+        </section>
+        <section>
+          <h2>Estados e saves</h2>
+          <div class="grupo">
+            <button type="button" id="salvar-estado" disabled>Salvar estado (slot 1)</button>
+            <button type="button" id="carregar-estado" disabled>Carregar estado (slot 1)</button>
+            <button type="button" id="baixar-save" disabled>Baixar arquivo .sav</button>
+            <label class="btn">Enviar arquivo .sav...<input type="file" id="enviar-save" accept=".sav" hidden /></label>
+          </div>
+        </section>
+        <section>
+          <h2>Vídeo e áudio</h2>
+          <div class="grupo">
+            <label class="campo">escala
+              <select id="escala">
+                <option value="auto">ajustar à tela</option>
+                <option value="1">1x (240 x 160)</option>
+                <option value="2">2x</option>
+                <option value="3">3x</option>
+                <option value="4">4x</option>
+                <option value="5">5x</option>
+              </select>
+            </label>
+            <button type="button" id="tela-cheia">Tela cheia</button>
+            <label class="campo">volume <input type="range" id="volume" min="0" max="200" value="100" /></label>
+          </div>
+        </section>
+        <section>
+          <h2>Teclas</h2>
+          <table>
+            <tr><td>direcional</td><td>setas</td></tr>
+            <tr><td>A / B</td><td>X / Z</td></tr>
+            <tr><td>L / R</td><td>A / S</td></tr>
+            <tr><td>Start</td><td>Enter</td></tr>
+            <tr><td>Select</td><td>Backspace</td></tr>
+          </table>
+        </section>
+      </aside>
+
+      <main class="palco" id="palco">
+        <div class="moldura" id="moldura">
+          <canvas id="tela" width="240" height="160" aria-label="Tela do jogo"></canvas>
+          <div class="aviso" id="aviso" aria-live="polite">Iniciando o núcleo...</div>
+        </div>
+
+        <div class="toque" aria-label="Controles na tela">
+          <div class="cruz">
+            <button type="button" class="c" data-botao="Up" aria-label="Cima">^</button>
+            <button type="button" class="e" data-botao="Left" aria-label="Esquerda">&lt;</button>
+            <button type="button" class="d" data-botao="Right" aria-label="Direita">&gt;</button>
+            <button type="button" class="b" data-botao="Down" aria-label="Baixo">v</button>
+          </div>
+          <div class="acoes">
+            <button type="button" data-botao="B">B</button>
+            <button type="button" data-botao="A">A</button>
+          </div>
+          <div class="laterais">
+            <button type="button" data-botao="L">L</button>
+            <button type="button" data-botao="Select">Select</button>
+            <button type="button" data-botao="Start">Start</button>
+            <button type="button" data-botao="R">R</button>
+          </div>
+        </div>
+
+        <section class="log">
+          <h2>Registro</h2>
+          <pre id="diag" aria-live="polite"></pre>
+          <button type="button" id="copiar-diag">Copiar registro</button>
+        </section>
+      </main>
+    </div>
+
+    <footer class="status">
+      <span id="st-iso">isolamento: -</span>
+      <span id="st-gl">WebGL2: -</span>
+      <span id="st-nucleos">núcleos: -</span>
+      <span id="st-sync">sync: -</span>
+      <span class="sp"></span>
+      <span>feito por Gaio Moreira</span>
+    </footer>
+  </div>
+
+  <script>
+    addEventListener("error", (e) => window.__erroInicial = e.message);
+  </script>
+  <script type="module">
+    const $ = (id) => document.getElementById(id);
+    const tela = $("tela");
+    const aviso = $("aviso");
+    const dependentes = ["pausar", "reiniciar", "salvar-estado", "carregar-estado", "baixar-save"].map($);
+    const teclas = { ArrowUp: "Up", ArrowDown: "Down", ArrowLeft: "Left", ArrowRight: "Right", x: "A", z: "B", a: "L", s: "R", Enter: "Start", Backspace: "Select" };
+    const marcas = { ok: "[ ok ]", andamento: "[ .. ]", aviso: "[aviso]", falha: "[FALHA]" };
+    const inicio = performance.now();
+    const linhas = [];
+
+    let emu = null;
+    let pausado = false;
+    let nomeJogo = "";
+    let saiu = false;
+
+    const registrar = (texto) => {
+      const t = ((performance.now() - inicio) / 1000).toFixed(1).padStart(5);
+      linhas.push(`[${t}s] ${texto}`);
+      $("diag").textContent = linhas.join("\n");
+      $("diag").scrollTop = $("diag").scrollHeight;
+    };
+    const boot = (tipo, texto) => {
+      const linha = document.createElement("div");
+      linha.className = tipo;
+      linha.textContent = `${marcas[tipo]} ${texto}`;
+      $("ab-log").appendChild(linha);
+      registrar(`${marcas[tipo]} ${texto}`);
+    };
+    const mostrar = (texto) => {
+      aviso.textContent = texto;
+      aviso.hidden = !texto;
+    };
+    const habilitar = (ligado) => dependentes.forEach((b) => { b.disabled = !ligado; });
+    const marcar = (nome, ligado) => document.querySelectorAll(`[data-botao="${nome}"]`).forEach((el) => el.classList.toggle("premido", ligado));
+
+    function sair() {
+      if (saiu) return;
+      saiu = true;
+      $("abertura").classList.add("saindo");
+      setTimeout(() => { $("abertura").hidden = true; }, 600);
+    }
+    $("ab-entrar").addEventListener("click", sair);
+    addEventListener("keydown", (e) => { if (!saiu && (e.key === "Enter" || e.key === "Escape")) sair(); });
+
+    function pronto() {
+      $("ab-entrar").textContent = "Entrar";
+      setTimeout(sair, Math.max(0, 4800 - (performance.now() - inicio)));
+    }
+
+    function aplicarEscala() {
+      const valor = $("escala").value;
+      const livre = $("palco").clientWidth - 30;
+      if (valor === "auto" && livre < 500) {
+        tela.style.width = "100%";
+        return;
+      }
+      const maximo = Math.min(livre, Math.max(240, (innerHeight - 260) * 1.5));
+      const k = valor === "auto" ? Math.max(1, Math.min(5, Math.floor(maximo / 240))) : Number(valor);
+      tela.style.width = `${240 * k}px`;
+    }
+    $("escala").addEventListener("change", aplicarEscala);
+    addEventListener("resize", aplicarEscala);
+    aplicarEscala();
+
+    async function iniciar() {
+      boot("andamento", "verificando o navegador");
+      $("st-nucleos").textContent = `núcleos: ${navigator.hardwareConcurrency}`;
+      registrar(`navegador: ${navigator.userAgent.slice(0, 90)}`);
+
+      if (location.protocol === "file:") {
+        boot("falha", "página aberta direto do disco. Use um servidor local ou o GitHub Pages");
+        mostrar("Abra esta página por um servidor.");
+        return;
+      }
+      if (!window.crossOriginIsolated) {
+        boot("andamento", "isolamento de origem: aguardando o service worker (a página recarrega uma vez)");
+        setTimeout(() => {
+          if (!window.crossOriginIsolated) {
+            boot("falha", "isolamento de origem indisponível. Atualize com Ctrl+Shift+R, saia de janela privada ou libere service workers para este site");
+            $("st-iso").textContent = "isolamento: não";
+            $("st-iso").className = "erro";
+          }
+        }, 6000);
+        return;
+      }
+      boot("ok", "isolamento de origem ativo (threads liberadas)");
+      $("st-iso").textContent = "isolamento: ok";
+      $("st-iso").className = "ok";
+
+      const gl = !!document.createElement("canvas").getContext("webgl2");
+      boot(gl ? "ok" : "aviso", gl ? "WebGL2 disponível" : "WebGL2 indisponível. Ative a aceleração de hardware nas configurações do navegador");
+      $("st-gl").textContent = `WebGL2: ${gl ? "sim" : "NÃO"}`;
+      $("st-gl").className = gl ? "ok" : "erro";
+
+      for (const arquivo of ["vendor/mgba.js", "vendor/mgba.wasm"]) {
+        try {
+          const resposta = await fetch(arquivo, { method: "HEAD" });
+          if (!resposta.ok) throw new Error(`HTTP ${resposta.status}`);
+        } catch (erro) {
+          boot("falha", `${arquivo} não encontrado (${erro.message}). Envie a pasta vendor inteira para o repositório, ao lado do index.html`);
+          mostrar("Faltam arquivos do núcleo (pasta vendor).");
+          $("estado").textContent = "falha";
+          return;
+        }
+      }
+      boot("ok", "arquivos do núcleo encontrados (vendor/mgba.js e vendor/mgba.wasm)");
+
+      boot("andamento", "iniciando o núcleo mGBA");
+      const espera = setTimeout(() => boot("aviso", "a inicialização está demorando; se não avançar, copie o registro e envie ao autor"), 15000);
+      try {
+        const { default: mGBA } = await import("./vendor/mgba.js");
+        emu = await mGBA({ canvas: tela });
+        await emu.FSInit();
+      } catch (erro) {
+        clearTimeout(espera);
+        boot("falha", `o núcleo não iniciou: ${erro.message || erro}`);
+        mostrar("O núcleo não iniciou. Veja o registro.");
+        $("estado").textContent = "falha";
+        return;
+      }
+      clearTimeout(espera);
+      const versao = `${emu.version?.projectVersion || ""}`.trim() || "?";
+      $("v-core").textContent = versao;
+      boot("ok", `núcleo iniciado: mGBA ${versao}`);
+      mostrar("Nenhum jogo carregado. Use \"Abrir jogo...\".");
+      $("estado").textContent = "pronto, sem jogo";
+      pronto();
+    }
+
+    $("arquivo").addEventListener("change", async (e) => {
+      const arquivo = e.target.files[0];
+      e.target.value = "";
+      if (!arquivo) return;
+      if (!emu) {
+        registrar("jogo escolhido, mas o núcleo ainda não iniciou");
+        return;
+      }
+      mostrar(`Lendo ${arquivo.name}...`);
+      const tamanho = `${(arquivo.size / 1048576).toFixed(1)} MB`;
+      registrar(`arquivo: ${arquivo.name} (${tamanho})`);
+      $("i-nome").textContent = arquivo.name;
+      $("i-tamanho").textContent = tamanho;
+      if (!/\.zip$/i.test(arquivo.name)) {
+        const cab = new Uint8Array(await arquivo.slice(0, 0xc0).arrayBuffer());
+        const texto = (de, ate) => String.fromCharCode(...cab.slice(de, ate)).replace(/[^\x20-\x7e]/g, "").trim();
+        $("i-titulo").textContent = texto(0xa0, 0xac) || "-";
+        $("i-codigo").textContent = texto(0xac, 0xb0) || "-";
+        registrar(`cabeçalho: título "${texto(0xa0, 0xac)}", código "${texto(0xac, 0xb0)}", marca de validade ${cab[0xb2] === 0x96 ? "ok" : "AUSENTE"}`);
+      }
+      const t0 = performance.now();
+      try {
+        emu.uploadRom(arquivo, () => {
+          registrar(`arquivo copiado para o núcleo em ${Math.round(performance.now() - t0)} ms`);
+          const caminho = `${emu.filePaths().gamePath}/${arquivo.name}`;
+          const abriu = emu.loadGame(caminho);
+          registrar(`loadGame("${caminho}") = ${abriu}`);
+          if (abriu) {
+            nomeJogo = arquivo.name;
+            pausado = false;
+            $("pausar").textContent = "Pausar";
+            $("estado").textContent = `jogando: ${nomeJogo}`;
+            habilitar(true);
+            mostrar("");
+          } else {
+            mostrar("O núcleo recusou o arquivo. Confira se é um jogo de Game Boy Advance.");
+          }
+        });
+      } catch (erro) {
+        registrar(`erro ao enviar o arquivo: ${erro.message || erro}`);
+        mostrar("Erro ao ler o arquivo. Veja o registro.");
+      }
+    });
+
+    $("pausar").addEventListener("click", () => {
+      pausado = !pausado;
+      if (pausado) emu.pauseGame(); else emu.resumeGame();
+      $("pausar").textContent = pausado ? "Continuar" : "Pausar";
+      $("estado").textContent = `${pausado ? "pausado" : "jogando"}: ${nomeJogo}`;
+    });
+    $("reiniciar").addEventListener("click", () => emu.quickReload());
+    $("salvar-estado").addEventListener("click", () => {
+      registrar(`salvar estado: ${emu.saveState(1)}`);
+      sincronizar();
+    });
+    $("carregar-estado").addEventListener("click", () => registrar(`carregar estado: ${emu.loadState(1)}`));
+
+    $("baixar-save").addEventListener("click", () => {
+      const dados = emu.getSave();
+      if (!dados) {
+        registrar("ainda não há save; salve dentro do jogo primeiro");
+        return;
+      }
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(new Blob([dados], { type: "application/octet-stream" }));
+      link.download = `${nomeJogo.replace(/\.[^.]+$/, "")}.sav`;
+      link.click();
+      URL.revokeObjectURL(link.href);
+      registrar(`save exportado (${dados.length} bytes)`);
+    });
+
+    $("enviar-save").addEventListener("change", (e) => {
+      const arquivo = e.target.files[0];
+      e.target.value = "";
+      if (!arquivo || !emu) return;
+      emu.uploadSaveOrSaveState(arquivo, () => registrar(`save "${arquivo.name}" enviado; reinicie o jogo para usá-lo`));
+    });
+
+    $("tela-cheia").addEventListener("click", () => {
+      if (document.fullscreenElement) document.exitFullscreen();
+      else $("moldura").requestFullscreen?.();
+    });
+    $("volume").addEventListener("input", (e) => emu?.setVolume(Number(e.target.value) / 100));
+    $("copiar-diag").addEventListener("click", async () => {
+      try { await navigator.clipboard.writeText(linhas.join("\n")); registrar("registro copiado"); } catch { registrar("não consegui copiar; selecione o texto e copie à mão"); }
+    });
+
+    document.querySelectorAll("[data-botao]").forEach((botao) => {
+      const nome = botao.dataset.botao;
+      botao.addEventListener("pointerdown", (e) => {
+        botao.setPointerCapture(e.pointerId);
+        emu?.buttonPress(nome);
+        marcar(nome, true);
+      });
+      ["pointerup", "pointercancel", "lostpointercapture"].forEach((tipo) => botao.addEventListener(tipo, () => {
+        emu?.buttonUnpress(nome);
+        marcar(nome, false);
+      }));
+    });
+
+    const nomeDaTecla = (e) => teclas[e.key.length === 1 ? e.key.toLowerCase() : e.key];
+    document.addEventListener("keydown", (e) => {
+      if (e.target.closest("input, select, button")) return;
+      const nome = nomeDaTecla(e);
+      if (nome) marcar(nome, true);
+      if (emu && !pausado && (e.key.startsWith("Arrow") || e.key === "Backspace" || e.key === " ")) e.preventDefault();
+    });
+    document.addEventListener("keyup", (e) => {
+      const nome = nomeDaTecla(e);
+      if (nome) marcar(nome, false);
+    });
+
+    function sincronizar() {
+      if (!emu) return;
+      emu.FSSync();
+      $("st-sync").textContent = `sync: ${new Date().toLocaleTimeString("pt-BR")}`;
+    }
+    setInterval(sincronizar, 15000);
+    document.addEventListener("visibilitychange", () => { if (document.hidden) sincronizar(); });
+    addEventListener("pagehide", sincronizar);
+
+    iniciar().catch((erro) => boot("falha", `erro inesperado: ${erro.message || erro}`));
+  </script>
+</body>
+</html>
