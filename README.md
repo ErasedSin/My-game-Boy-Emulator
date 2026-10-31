@@ -1,11 +1,11 @@
-# Projeto Emulador de GBA
+# Gaio Player
 
 Player de Game Boy Advance no navegador, feito em HTML, CSS e JavaScript. Usa o mGBA compilado para WebAssembly como núcleo de emulação. O meu trabalho está na interface e na integração: carregamento do jogo, controles, saves e instalação.
 
 **Este projeto não inclui jogos nem BIOS.** Cada pessoa escolhe o arquivo do jogo que possui, e ele fica guardado apenas no navegador dela.
 
 ## Recursos
-- Tela de abertura com a autoria e o propósito do projeto, que mostra a checagem real de cada etapa (isolamento de origem, WebGL2, arquivos do núcleo e início do mGBA) e some sozinha quando tudo está pronto. Se algo falha, ela fica na tela e explica o motivo
+- Tela de título no estilo de abertura de jogo (estrelas em canvas, cartucho desenhado pixel a pixel, efeito de monitor antigo), com a autoria e o propósito do projeto. Ela mostra a checagem real de cada etapa e espera a pessoa apertar Enter ou clicar. Se algo falha, explica o motivo
 - Interface de ferramenta: barra lateral com arquivo, emulação, estados, saves, escala, tela cheia e volume
 - Leitura do cabeçalho do jogo no próprio navegador (título, código e marca de validade)
 - Saves guardados no navegador (IndexedDB), com sincronização automática

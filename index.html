@@ -21,19 +21,31 @@
     select, input[type="range"] { font: inherit; color: var(--texto); background: #1b1f23; border: 1px solid var(--linha); border-radius: 2px; padding: 4px 6px; width: 100%; }
     input[type="range"] { padding: 0; accent-color: var(--acento); }
 
-    .abertura { position: fixed; inset: 0; z-index: 50; background: #0b0c0e; display: grid; align-items: center; padding: 6vw; transition: opacity 0.5s ease; overflow: auto; }
+    .abertura { position: fixed; inset: 0; z-index: 50; background: #07080a; display: grid; place-items: center; overflow: auto; transition: opacity 0.5s ease; cursor: pointer; }
     .abertura.saindo { opacity: 0; pointer-events: none; }
-    .ab-conteudo { max-width: 660px; display: grid; gap: 14px; }
-    .ab-sup { color: var(--mudo); text-transform: uppercase; letter-spacing: 0.2em; font-size: 11px; }
-    .ab-conteudo h1 { font-size: clamp(30px, 6vw, 46px); font-weight: 400; letter-spacing: -0.02em; line-height: 1.1; }
-    .ab-autor { color: var(--acento); font-size: 15px; }
-    .ab-texto { color: #b4b9be; max-width: 60ch; }
-    .ab-lista { list-style: none; color: var(--mudo); display: grid; gap: 2px; }
-    .ab-lista li::before { content: "- "; }
-    .ab-log { min-height: 8.5em; border-top: 1px solid var(--linha); border-bottom: 1px solid var(--linha); padding: 8px 0; display: grid; align-content: start; }
+    .ab-fundo { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; }
+    .ab-crt { position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.3) 0 1px, transparent 1px 3px), radial-gradient(ellipse at center, transparent 52%, rgba(0, 0, 0, 0.7) 100%); animation: tremer 5s steps(2) infinite; }
+    .ab-conteudo { position: relative; z-index: 1; width: min(100%, 720px); padding: 28px 22px; display: grid; gap: 14px; justify-items: center; text-align: center; }
+    .ab-cartucho { width: 96px; height: 96px; image-rendering: pixelated; animation: flutuar 2.4s steps(6) infinite; }
+    .ab-sup { color: var(--mudo); text-transform: uppercase; letter-spacing: 0.3em; font-size: 11px; }
+    .ab-logo { font-size: clamp(42px, 12vw, 108px); line-height: 1; font-weight: 700; letter-spacing: 0.05em; animation: entrar 0.9s steps(8) both; }
+    .ab-logo .a { color: #ffd37a; text-shadow: 1px 1px 0 #c9852a, 2px 2px 0 #c9852a, 3px 3px 0 #a56a1c, 4px 4px 0 #a56a1c, 5px 5px 0 #7a4c12, 6px 6px 0 #7a4c12, 0 0 32px rgba(224, 160, 48, 0.45); }
+    .ab-logo .b { color: #ece7da; text-shadow: 1px 1px 0 #9a958a, 2px 2px 0 #9a958a, 3px 3px 0 #6b675f, 4px 4px 0 #6b675f, 5px 5px 0 #3d3a35, 6px 6px 0 #3d3a35; }
+    .ab-autor { font-size: 16px; color: #cfc9b8; }
+    .ab-autor strong { color: var(--acento); }
+    .ab-texto { color: #a9aeb3; max-width: 54ch; }
+    .ab-tags { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+    .ab-tags li { border: 1px solid #3a4046; padding: 1px 8px; font-size: 11px; color: var(--mudo); }
+    .ab-iniciar { display: block; margin-top: 6px; background: none; border: 2px solid var(--mudo); color: var(--mudo); padding: 10px 22px; letter-spacing: 0.18em; font-size: 14px; text-align: center; }
+    .ab-iniciar.pronto { border-color: var(--acento); color: var(--acento); animation: piscar 1.1s steps(2) infinite; }
+    .ab-iniciar.falha { border-color: var(--erro); color: var(--erro); }
+    .ab-log { width: min(100%, 560px); text-align: left; font-size: 11.5px; display: grid; gap: 1px; padding: 8px 10px; background: rgba(0, 0, 0, 0.5); border: 1px solid var(--linha); cursor: default; }
     .ab-log .ok { color: var(--ok); } .ab-log .falha { color: var(--erro); } .ab-log .aviso { color: var(--acento); } .ab-log .andamento { color: var(--mudo); }
-    .ab-rodape { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; color: var(--mudo); font-size: 12px; }
-    .ab-rodape button { text-align: center; }
+    .ab-aviso { color: var(--mudo); font-size: 11px; }
+    @keyframes tremer { 50% { opacity: 0.94; } }
+    @keyframes flutuar { 50% { transform: translateY(-8px); } }
+    @keyframes entrar { from { opacity: 0; transform: translateY(-24px); } }
+    @keyframes piscar { 50% { opacity: 0.25; } }
 
     .app { display: grid; grid-template-rows: auto 1fr auto; min-height: 100vh; }
     .barra { display: flex; gap: 16px; align-items: center; padding: 8px 14px; border-bottom: 1px solid var(--linha); background: var(--painel); flex-wrap: wrap; }
@@ -73,26 +85,23 @@
       .palco { order: 1; }
       .moldura { width: 100%; }
     }
-    @media (prefers-reduced-motion: reduce) { .abertura { transition: none; } }
+    @media (prefers-reduced-motion: reduce) { .abertura { transition: none; } .abertura *, .ab-crt { animation: none !important; } }
   </style>
 </head>
 <body>
   <div class="abertura" id="abertura" role="dialog" aria-labelledby="ab-titulo">
+    <canvas class="ab-fundo" id="ab-fundo" aria-hidden="true"></canvas>
+    <div class="ab-crt" aria-hidden="true"></div>
     <div class="ab-conteudo">
+      <canvas class="ab-cartucho" id="ab-cartucho" width="16" height="16" aria-hidden="true"></canvas>
       <p class="ab-sup">projeto de portfólio</p>
-      <h1 id="ab-titulo">GBA Player</h1>
-      <p class="ab-autor">feito por Gaio Moreira</p>
-      <p class="ab-texto">Interface própria para o emulador mGBA, compilado para WebAssembly e executado dentro do navegador. O intuito do projeto é praticar a integração de WebAssembly, armazenamento local (IndexedDB), service workers e controles para toque, sem nenhum servidor.</p>
-      <ul class="ab-lista">
-        <li>HTML, CSS e JavaScript puro</li>
-        <li>núcleo de emulação: mGBA (MPL-2.0), por Vicki Pfau</li>
-        <li>saves persistentes no próprio navegador</li>
-      </ul>
+      <h1 class="ab-logo" id="ab-titulo"><span class="a">GBA</span> <span class="b">PLAYER</span></h1>
+      <p class="ab-autor">feito por <strong>Gaio Moreira</strong></p>
+      <p class="ab-texto">Um player de Game Boy Advance que roda dentro do navegador: interface própria sobre o emulador mGBA, compilado para WebAssembly. O intuito é praticar WebAssembly, IndexedDB, service workers e controles para toque, sem servidor.</p>
+      <ul class="ab-tags"><li>HTML</li><li>CSS</li><li>JavaScript</li><li>WebAssembly</li><li>IndexedDB</li><li>service worker</li></ul>
+      <button type="button" class="ab-iniciar" id="ab-entrar">CARREGANDO NÚCLEO...</button>
       <div class="ab-log" id="ab-log" aria-live="polite"></div>
-      <div class="ab-rodape">
-        <span>Este site não inclui jogos. Use um arquivo que você possui.</span>
-        <button type="button" id="ab-entrar">Pular</button>
-      </div>
+      <p class="ab-aviso">Este site não inclui jogos. Use um arquivo que você possui.</p>
     </div>
   </div>
 
@@ -236,6 +245,7 @@
       linha.textContent = `${marcas[tipo]} ${texto}`;
       $("ab-log").appendChild(linha);
       registrar(`${marcas[tipo]} ${texto}`);
+      if (tipo === "falha") marcarFalha();
     };
     const mostrar = (texto) => {
       aviso.textContent = texto;
@@ -244,18 +254,63 @@
     const habilitar = (ligado) => dependentes.forEach((b) => { b.disabled = !ligado; });
     const marcar = (nome, ligado) => document.querySelectorAll(`[data-botao="${nome}"]`).forEach((el) => el.classList.toggle("premido", ligado));
 
+    const pixelsCartucho = [
+      "................", "..kkkkkkkkkkkk..", ".kggggggggggggk.", ".kgkkkkkkkkkkgk.",
+      ".kgkwwwwwwwwkgk.", ".kgkwaaaaaawkgk.", ".kgkwaaaaaawkgk.", ".kgkwwwwwwwwkgk.",
+      ".kgkkkkkkkkkkgk.", ".kggggggggggggk.", ".kggkkkkkkkkggk.", "..kgkdkdkdkdkgk.",
+      "..kkkkkkkkkkkk..", "................", "................", "................",
+    ];
+    const paleta = { k: "#0d0d12", g: "#9b96a8", d: "#6a6577", w: "#efe6d0", a: "#e0a030" };
+    const ctxCartucho = $("ab-cartucho").getContext("2d");
+    pixelsCartucho.forEach((linha, y) => [...linha].forEach((c, x) => {
+      if (c === ".") return;
+      ctxCartucho.fillStyle = paleta[c];
+      ctxCartucho.fillRect(x, y, 1, 1);
+    }));
+
+    const reduzirMovimento = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const fundo = $("ab-fundo");
+    const ctxFundo = fundo.getContext("2d");
+    fundo.width = 192;
+    fundo.height = 108;
+    const estrelas = Array.from({ length: 90 }, () => ({
+      x: Math.random() * 192, y: Math.random() * 108, v: 0.03 + Math.random() * 0.12,
+      cor: Math.random() < 0.18 ? "#e0a030" : "#8a9199",
+    }));
+    function desenharEstrelas() {
+      ctxFundo.clearRect(0, 0, 192, 108);
+      for (const e of estrelas) {
+        ctxFundo.fillStyle = e.cor;
+        ctxFundo.fillRect(Math.floor(e.x), Math.floor(e.y), 1, 1);
+        if (reduzirMovimento) continue;
+        e.x -= e.v;
+        if (e.x < 0) { e.x = 192; e.y = Math.random() * 108; }
+      }
+      if (!saiu && !reduzirMovimento) requestAnimationFrame(desenharEstrelas);
+    }
+    desenharEstrelas();
+
     function sair() {
       if (saiu) return;
       saiu = true;
       $("abertura").classList.add("saindo");
       setTimeout(() => { $("abertura").hidden = true; }, 600);
     }
-    $("ab-entrar").addEventListener("click", sair);
-    addEventListener("keydown", (e) => { if (!saiu && (e.key === "Enter" || e.key === "Escape")) sair(); });
+    $("abertura").addEventListener("click", (e) => { if (!e.target.closest(".ab-log")) sair(); });
+    addEventListener("keydown", (e) => {
+      if (saiu || !["Enter", " ", "Escape"].includes(e.key)) return;
+      e.preventDefault();
+      sair();
+    });
 
     function pronto() {
-      $("ab-entrar").textContent = "Entrar";
-      setTimeout(sair, Math.max(0, 4800 - (performance.now() - inicio)));
+      $("ab-entrar").textContent = "PRESSIONE ENTER";
+      $("ab-entrar").classList.add("pronto");
+    }
+    function marcarFalha() {
+      $("ab-entrar").textContent = "ENTRAR MESMO ASSIM";
+      $("ab-entrar").classList.remove("pronto");
+      $("ab-entrar").classList.add("falha");
     }
 
     function aplicarEscala() {
@@ -303,23 +358,25 @@
       $("st-gl").textContent = `WebGL2: ${gl ? "sim" : "NÃO"}`;
       $("st-gl").className = gl ? "ok" : "erro";
 
-      for (const arquivo of ["vendor/mgba.js", "vendor/mgba.wasm"]) {
+      let base = null;
+      for (const candidato of ["", "vendor/"]) {
         try {
-          const resposta = await fetch(arquivo, { method: "HEAD" });
-          if (!resposta.ok) throw new Error(`HTTP ${resposta.status}`);
-        } catch (erro) {
-          boot("falha", `${arquivo} não encontrado (${erro.message}). Envie a pasta vendor inteira para o repositório, ao lado do index.html`);
-          mostrar("Faltam arquivos do núcleo (pasta vendor).");
-          $("estado").textContent = "falha";
-          return;
-        }
+          const respostas = await Promise.all(["mgba.js", "mgba.wasm"].map((nome) => fetch(candidato + nome, { method: "HEAD" })));
+          if (respostas.every((r) => r.ok)) { base = candidato; break; }
+        } catch {}
       }
-      boot("ok", "arquivos do núcleo encontrados (vendor/mgba.js e vendor/mgba.wasm)");
+      if (base === null) {
+        boot("falha", "mgba.js e mgba.wasm não encontrados, nem ao lado do index.html nem na pasta vendor/");
+        mostrar("Faltam arquivos do núcleo (mgba.js e mgba.wasm).");
+        $("estado").textContent = "falha";
+        return;
+      }
+      boot("ok", `arquivos do núcleo encontrados (${base ? "pasta " + base : "ao lado do index.html"})`);
 
       boot("andamento", "iniciando o núcleo mGBA");
       const espera = setTimeout(() => boot("aviso", "a inicialização está demorando; se não avançar, copie o registro e envie ao autor"), 15000);
       try {
-        const { default: mGBA } = await import("./vendor/mgba.js");
+        const { default: mGBA } = await import(new URL(base + "mgba.js", location.href).href);
         emu = await mGBA({ canvas: tela });
         await emu.FSInit();
       } catch (erro) {
